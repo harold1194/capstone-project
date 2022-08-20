@@ -1,0 +1,85 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:student_handbook/models/task_model.dart';
+
+class FireStoreMethods {
+  FireStoreMethods();
+
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  Future<void> addTask({required TaskModel task}) async {
+    FirebaseAuth auth = FirebaseAuth.instance;
+    final User? user = auth.currentUser;
+    String? uid = user?.uid;
+    var taskcollection =
+        firestore.collection('tasks').doc(uid).collection('mytask');
+    await taskcollection.add(task.tojson());
+  }
+
+  Stream<List<TaskModel>> getTasks({required String mydate}) {
+    return firestore
+        .collection('task')
+        .where('date', isEqualTo: mydate)
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) => snapshot.docs
+            .map((doc) => TaskModel.fromjson(doc.data(), doc.id))
+            .toList());
+  }
+
+  Future<void> updateTask(
+      {required String title,
+      note,
+      docid,
+      date,
+      starttime,
+      endtime,
+      required int reminder,
+      colorindex}) async {
+    var taskcollection = firestore.collection('tasks');
+    await taskcollection.doc(docid).update({
+      'title': title,
+      'note': note,
+      'date': date,
+      'starttime': starttime,
+      'endtime': endtime,
+      'reminder': reminder,
+      'colorindex': colorindex,
+    });
+  }
+
+  Future<void> deleteTask({required String docid}) async {
+    var taskcollection = firestore.collection('tasks');
+    await taskcollection.doc(docid).delete();
+  }
+  // Future<String> addTask(
+  //     String title,
+  //     String note,
+  //     String uid,
+  //     String date,
+  //     String startTime,
+  //     String endTime,
+  //     String reminder,
+  //     String colorIndex) async {
+  //   String res = 'Some error occured';
+  //   try {
+  //     String taskId = const Uuid().v1();
+  //     TaskModel task = TaskModel(
+  //       uid: uid,
+  //       taskId: taskId,
+  //       title: title,
+  //       note: note,
+  //       date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+  //       startTime: startTime,
+  //       endTime: endTime,
+  //       reminder: 0,
+  //       colorIndex: 0,
+  //     );
+  //     firestore.collection('task').doc(taskId).set(task.toJson());
+  //     res = 'success';
+  //   } catch (err) {
+  //     res = err.toString();
+  //   }
+  //   return res;
+  // }
+}

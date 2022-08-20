@@ -1,0 +1,181 @@
+// ignore_for_file: prefer_const_constructors
+
+import 'package:animate_do/animate_do.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:date_picker_timeline/date_picker_timeline.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:student_handbook/constant.dart';
+import 'package:student_handbook/data/firestore_crud.dart';
+import 'package:student_handbook/models/task_model.dart';
+import 'package:student_handbook/resources/add_event.dart';
+import 'package:student_handbook/services/notification_service.dart';
+import 'package:student_handbook/shared/constant/const_variables.dart';
+import 'package:student_handbook/shared/styles/colors.dart';
+import 'package:student_handbook/widgets/custom_appbar.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:student_handbook/widgets/my_button.dart';
+import 'package:student_handbook/widgets/task_container.dart';
+
+class TaskScreen extends StatefulWidget {
+  const TaskScreen({Key? key}) : super(key: key);
+
+  @override
+  State<TaskScreen> createState() => _TaskScreenState();
+}
+
+class _TaskScreenState extends State<TaskScreen> {
+  static var currentdate = DateTime.now();
+
+  String? uid;
+  @override
+  void initState() {
+    super.initState();
+    // getuid();
+    NotificationsHandler.requestPermission(context);
+  }
+
+  // Future<void> getuid() async {
+  //   FirebaseAuth auth = FirebaseAuth.instance;
+  //   final User? user = await auth.currentUser;
+  //   setState(() {
+  //     uid = user!.uid;
+  //   });
+  // }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: MyAppBar(backGroundColor: kPrimaryColor, title: 'Task'),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              DateFormat('MMMM, dd').format(currentdate),
+              style:
+                  Theme.of(context).textTheme.headline1!.copyWith(fontSize: 17),
+            ),
+            _buildDatePicker(context),
+            Expanded(
+              child: StreamBuilder(
+                stream: FireStoreMethods().getTasks(
+                  mydate: DateFormat('yyyy-MM-dd').format(currentdate),
+                ),
+                builder: (BuildContext context,
+                    AsyncSnapshot<List<TaskModel>> snapshot) {
+                  if (snapshot.hasError) {
+                    return _nodatawidget();
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: const CircularProgressIndicator());
+                  }
+                  return snapshot.data!.isNotEmpty
+                      ? ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            var task = snapshot.data![index];
+                            Widget taskcontainer = TaskContainer(
+                              id: task.id,
+                              color: colors[task.colorIndex],
+                              title: task.title,
+                              starttime: task.startTime,
+                              endtime: task.endTime,
+                              note: task.note,
+                            );
+                            return InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => AddEvents()));
+                                },
+                                child: index % 2 == 0
+                                    ? BounceInLeft(
+                                        duration:
+                                            const Duration(milliseconds: 1000),
+                                        child: taskcontainer)
+                                    : BounceInRight(
+                                        duration:
+                                            const Duration(milliseconds: 1000),
+                                        child: taskcontainer));
+                          },
+                        )
+                      : _nodatawidget();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.green.shade900,
+        onPressed: () {
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => AddEvents()));
+        },
+        child: Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _nodatawidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/icons/clipboard.png',
+            height: 170,
+          ),
+          SizedBox(height: 30),
+          Text(
+            'There Is No Tasks',
+            style: Theme.of(context)
+                .textTheme
+                .headline1!
+                .copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  SizedBox _buildDatePicker(BuildContext context) {
+    return SizedBox(
+      height: 100,
+      child: DatePicker(
+        DateTime.now(),
+        width: 70,
+        initialSelectedDate: DateTime.now(),
+        dateTextStyle: Theme.of(context).textTheme.headline1!.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+        dayTextStyle: Theme.of(context).textTheme.subtitle1!.copyWith(
+              fontSize: 10,
+              color: Appcolors.black,
+              fontWeight: FontWeight.bold,
+            ),
+        monthTextStyle: Theme.of(context).textTheme.subtitle1!.copyWith(
+              fontSize: 10,
+              color: Appcolors.black,
+              fontWeight: FontWeight.bold,
+            ),
+        selectionColor: Colors.deepOrange,
+        onDateChange: (DateTime newdate) {
+          setState(() {
+            currentdate = newdate;
+          });
+        },
+      ),
+    );
+  }
+}
